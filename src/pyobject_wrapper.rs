@@ -12,13 +12,12 @@ impl PyObjectWrapper {
 
 impl PartialEq for PyObjectWrapper {
     fn eq(&self, other: &Self) -> bool {
-        return Python::with_gil(|py| -> PyResult<bool> {
-            let operator = py.import("operator")?;
-            let eq = operator.getattr("eq")?;
-            let result = eq.call1((&self.obj, &other.obj))?;
-            return Ok(result.extract::<bool>()?);
+        Python::with_gil(|py| -> PyResult<bool> {
+            self.obj
+                .call_method1(py, "__eq__", (&other.obj,))?
+                .extract::<bool>(py)
         })
-        .unwrap();
+        .unwrap()
     }
 }
 
@@ -26,23 +25,24 @@ impl Eq for PyObjectWrapper {}
 
 impl PartialOrd for PyObjectWrapper {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        return Python::with_gil(|py| -> PyResult<Option<std::cmp::Ordering>> {
-            let operator = py.import("operator")?;
-            let lt = operator.getattr("lt")?;
-            let result = lt.call1((&self.obj, &other.obj))?;
-            let result = result.extract::<bool>()?;
-            if result {
-                return Ok(Some(std::cmp::Ordering::Less));
+        return Python::with_gil(|py| -> PyResult<std::cmp::Ordering> {
+            let gt = self
+                .obj
+                .call_method1(py, "__gt__", (&other.obj,))?
+                .extract::<bool>(py)?;
+            if gt {
+                return Ok(std::cmp::Ordering::Greater);
             }
-            let gt = operator.getattr("gt")?;
-            let result = gt.call1((&self.obj, &other.obj))?;
-            let result = result.extract::<bool>()?;
-            if result {
-                return Ok(Some(std::cmp::Ordering::Greater));
+            let lt = self
+                .obj
+                .call_method1(py, "__lt__", (&other.obj,))?
+                .extract::<bool>(py)?;
+            if lt {
+                return Ok(std::cmp::Ordering::Less);
             }
-            return Ok(Some(std::cmp::Ordering::Equal));
+            return Ok(std::cmp::Ordering::Equal);
         })
-        .unwrap();
+        .ok();
     }
 }
 

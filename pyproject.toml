@@ -34,6 +34,7 @@ pyink = "^23.5.0"
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.0"
 pytest-cov = "^4.1.0"
+sortedcollections = "^2.1.0"
 
 [tool.pyink]
 pyink-indentation = 2
