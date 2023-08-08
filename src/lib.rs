@@ -1,12 +1,10 @@
-use std::collections::BTreeMap;
+use std::{
+    cell::RefCell,
+    collections::{btree_map, BTreeMap},
+    sync::{Arc, RwLock},
+};
 
-use pyo3::{exceptions::PyStopIteration, prelude::*};
-
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
-}
+use pyo3::prelude::*;
 
 struct PyObjectWrapper {
     obj: PyObject,
@@ -76,31 +74,48 @@ impl Ord for PyObjectWrapper {
     }
 }
 
+#[derive(Clone)]
 #[pyclass]
-struct PyIterator {
-    iter: Box<dyn Iterator<Item = PyObjectWrapper>>,
+struct PyKeysIterator {
+    source: Arc<RwLock<BTreeMap<PyObjectWrapper, PyObjectWrapper>>>,
+    inner: RefCell<Option<Arc<RwLock<btree_map::Keys<'static, PyObjectWrapper, PyObjectWrapper>>>>>,
 }
 
-unsafe impl Send for PyIterator {}
-impl PyIterator {
-    fn new(iter: Box<dyn Iterator<Item = PyObjectWrapper>>) -> Self {
-        PyIterator { iter }
+impl PyKeysIterator {
+    fn new(inner: Arc<RwLock<BTreeMap<PyObjectWrapper, PyObjectWrapper>>>) -> Self {
+        PyKeysIterator {
+            source: inner,
+            inner: RefCell::new(None),
+        }
     }
 }
 
 #[pymethods]
-impl PyIterator {
-    fn next(&mut self) -> PyResult<PyObject> {
-        match self.iter.next() {
-            Some(x) => Ok(x.obj),
-            None => Err(PyErr::new::<PyStopIteration, _>(())),
-        }
+impl PyKeysIterator {
+    fn __iter__(&self) -> Self {
+        let ret = self.clone();
+        let keys = self.source.read().unwrap();
+        let keys = Arc::new(RwLock::new(keys.keys()));
+        self.inner.borrow_mut().replace(keys);
+
+        return ret;
+    }
+
+    fn __next__(&mut self) -> Option<PyObject> {
+        self.inner
+            .borrow()
+            .as_ref()
+            .unwrap()
+            .write()
+            .unwrap()
+            .next()
+            .map(|x| x.obj.clone())
     }
 }
 
 #[pyclass]
 struct PyBTreeMap {
-    tree: BTreeMap<PyObjectWrapper, PyObjectWrapper>,
+    tree: Arc<RwLock<BTreeMap<PyObjectWrapper, PyObjectWrapper>>>,
 }
 
 #[pymethods]
@@ -108,7 +123,7 @@ impl PyBTreeMap {
     #[new]
     fn new() -> Self {
         PyBTreeMap {
-            tree: BTreeMap::new(),
+            tree: Arc::new(RwLock::new(BTreeMap::new())),
         }
     }
 
@@ -116,34 +131,39 @@ impl PyBTreeMap {
         let key = PyObjectWrapper::new(key);
         let value = PyObjectWrapper::new(value);
         // cast to orderable type
-        self.tree.insert(key, value);
+        self.tree.write().unwrap().insert(key, value);
     }
 
-    fn get(&self, key: PyObject) -> Option<&PyObject> {
+    fn get(&self, key: PyObject) -> Option<PyObject> {
         let key = PyObjectWrapper::new(key);
-        return self.tree.get(&key).map(|x| &x.obj);
+        return self.tree.read().unwrap().get(&key).map(|x| x.obj.clone());
     }
 
     fn remove(&mut self, key: PyObject) -> Option<PyObject> {
         let key = PyObjectWrapper::new(key);
-        return self.tree.remove(&key).map(|x| x.obj);
+        return self.tree.write().unwrap().remove(&key).map(|x| x.obj);
     }
 
     fn len(&self) -> usize {
-        return self.tree.len();
+        return self.tree.read().unwrap().len();
     }
 
     fn is_empty(&self) -> bool {
-        return self.tree.is_empty();
+        return self.tree.read().unwrap().is_empty();
     }
 
     fn clear(&mut self) {
-        self.tree.clear();
+        self.tree.write().unwrap().clear();
     }
 
-    fn keys(&self) -> Vec<PyObject> {
-        let keys = self.tree.keys().map(|x| x.obj.clone());
-        return keys.collect();
+    // fn keys(&self) -> PyKeysIterator {
+    //     let clone: &PyCell<PyBTreeMap> =
+    //         Python::with_gil(|py| self.into_py(py).clone_ref(py).downcast(py).unwrap());
+    //     PyKeysIterator::new(*clone)
+    // }
+
+    fn keys(&self) -> PyKeysIterator {
+        PyKeysIterator::new(self.tree.clone())
     }
 
     // fn items(&self) -> PyIterator {
@@ -160,7 +180,6 @@ impl PyBTreeMap {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn tree_collections(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
     m.add_class::<PyBTreeMap>()?;
     Ok(())
 }
