@@ -1,66 +1,69 @@
 use std::collections::btree_map;
 
-use crate::pybtree_map::PyBTreeMap;
 use crate::pyobject_wrapper::PyObjectWrapper;
-use ouroboros::self_referencing;
-use pyo3::exceptions::PyStopIteration;
 use pyo3::prelude::*;
 
+// -------------------
+// PyBTreeKeyIterator
+// -------------------
 #[pyclass]
-#[self_referencing]
 pub struct PyBTreeKeyIterator {
-    owner: PyObject,
-    #[borrows(owner)]
-    data: &'this PyRef<'static, PyBTreeMap>,
-    #[borrows(data)]
-    iter: btree_map::Keys<'static, PyObjectWrapper, PyObjectWrapper>,
+    #[pyo3(get)]
+    pub owner: PyObject,
+    pub iter: btree_map::Keys<'static, PyObjectWrapper, PyObjectWrapper>,
 }
 
-unsafe impl Send for PyBTreeKeyIterator {}
-
+#[pymethods]
 impl PyBTreeKeyIterator {
-    pub fn create(py: Python, owner: &PyObject) -> Self {
-        let x = PyBTreeKeyIterator::new(
-            owner.clone(),
-            |owner| {
-                let owner: &PyCell<PyBTreeMap> = owner.downcast(py).unwrap();
-                let x = owner.borrow();
-                // transmute x to have a static lifetime
-                unsafe {
-                    std::mem::transmute::<&PyRef<'_, PyBTreeMap>, &'static &PyRef<'_, PyBTreeMap>>(
-                        &x,
-                    )
-                }
-            },
-            |data| {
-                let data = data.tree.keys();
-                // transmute data to have a static lifetime
-                let x = unsafe {
-                    std::mem::transmute::<
-                        btree_map::Keys<'_, PyObjectWrapper, PyObjectWrapper>,
-                        btree_map::Keys<'static, PyObjectWrapper, PyObjectWrapper>,
-                    >(data)
-                };
-                x
-            },
-        );
-        return x;
+    fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
     }
 
-    pub fn next(&mut self) -> PyResult<PyObject> {
-        self.with_iter_mut(|x| match x.next() {
-            Some(x) => Ok(x.obj.clone()),
-            None => Err(PyErr::new::<PyStopIteration, _>(())),
-        })
+    fn __next__(&mut self) -> Option<PyObject> {
+        self.iter.next().map(|x| x.obj.clone())
     }
 }
 
-// #[pymethods]
-// impl PyBTreeKeyIterator {
-//     fn next(&mut self) -> PyResult<PyObject> {
-//         match self.iter.next() {
-//             Some(x) => Ok(x.obj),
-//             None => Err(PyErr::new::<PyStopIteration, _>(())),
-//         }
-//     }
-// }
+// -------------------
+// PyBTreeValueIterator
+// -------------------
+#[pyclass]
+pub struct PyBTreeValueIterator {
+    #[pyo3(get)]
+    pub owner: PyObject,
+    pub iter: btree_map::Values<'static, PyObjectWrapper, PyObjectWrapper>,
+}
+
+#[pymethods]
+impl PyBTreeValueIterator {
+    fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
+
+    fn __next__(&mut self) -> Option<PyObject> {
+        self.iter.next().map(|x| x.obj.clone())
+    }
+}
+
+// -------------------
+// PyBTreeItemsIterator
+// -------------------
+#[pyclass]
+pub struct PyBTreeIterator {
+    #[pyo3(get)]
+    pub owner: PyObject,
+    pub iter: btree_map::Iter<'static, PyObjectWrapper, PyObjectWrapper>,
+}
+
+#[pymethods]
+impl PyBTreeIterator {
+    fn __iter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
+
+    fn __next__(&mut self) -> Option<(PyObject, PyObject)> {
+        self.iter
+            .next()
+            .map(|(k, v)| (k.obj.clone(), v.obj.clone()))
+    }
+}

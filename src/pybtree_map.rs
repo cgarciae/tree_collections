@@ -1,7 +1,7 @@
-use crate::pyiterator::PyBTreeKeyIterator;
+use crate::pyiterator::{PyBTreeIterator, PyBTreeKeyIterator, PyBTreeValueIterator};
 use crate::pyobject_wrapper::PyObjectWrapper;
 use pyo3::prelude::*;
-use std::collections::BTreeMap;
+use std::collections::{btree_map, BTreeMap};
 
 #[pyclass]
 pub struct PyBTreeMap {
@@ -47,30 +47,60 @@ impl PyBTreeMap {
     }
 
     pub fn keys(slf: PyRef<'_, Self>) -> PyBTreeKeyIterator {
-        Python::with_gil(|py| {
-            let obj = &slf.into_py(py);
-            return PyBTreeKeyIterator::create(py, obj);
-        })
+        let slf = &slf;
+        return Python::with_gil(|py| {
+            let owner = slf.into_py(py);
+            let iter = slf.tree.keys();
+
+            return PyBTreeKeyIterator {
+                owner: owner.clone(),
+                iter: unsafe {
+                    std::mem::transmute::<
+                        btree_map::Keys<'_, PyObjectWrapper, PyObjectWrapper>,
+                        btree_map::Keys<'static, PyObjectWrapper, PyObjectWrapper>,
+                    >(iter)
+                },
+            };
+        });
     }
 
-    pub fn values(&self) -> Vec<PyObject> {
-        return self.tree.values().map(|x| x.obj.clone()).collect();
+    pub fn values(slf: PyRef<'_, Self>) -> PyBTreeValueIterator {
+        let slf = &slf;
+        return Python::with_gil(|py| {
+            let owner = slf.into_py(py);
+            let iter = slf.tree.values();
+
+            return PyBTreeValueIterator {
+                owner: owner.clone(),
+                iter: unsafe {
+                    std::mem::transmute::<
+                        btree_map::Values<'_, PyObjectWrapper, PyObjectWrapper>,
+                        btree_map::Values<'static, PyObjectWrapper, PyObjectWrapper>,
+                    >(iter)
+                },
+            };
+        });
     }
 
-    pub fn items(&self) -> Vec<(PyObject, PyObject)> {
-        return self
-            .tree
-            .iter()
-            .map(|(k, v)| (k.obj.clone(), v.obj.clone()))
-            .collect();
+    pub fn items(slf: PyRef<'_, Self>) -> PyBTreeIterator {
+        let slf = &slf;
+        return Python::with_gil(|py| {
+            let owner = slf.into_py(py);
+            let iter = slf.tree.iter();
+
+            return PyBTreeIterator {
+                owner: owner.clone(),
+                iter: unsafe {
+                    std::mem::transmute::<
+                        btree_map::Iter<'_, PyObjectWrapper, PyObjectWrapper>,
+                        btree_map::Iter<'static, PyObjectWrapper, PyObjectWrapper>,
+                    >(iter)
+                },
+            };
+        });
     }
 
-    // pub fn __iter__(&self) -> PyResult<PyObject> {
-    //     return Python::with_gil(|py| {
-    //         let builtins = py.import("builtins")?;
-    //         let py_iter = builtins.getattr("iter")?;
-    //         let iter = py_iter.call1((self.keys(),))?;
-    //         return Ok(iter.into_py(py));
-    //     });
-    // }
+    fn __iter__(slf: PyRef<Self>) -> PyBTreeKeyIterator {
+        PyBTreeMap::keys(slf)
+    }
 }
