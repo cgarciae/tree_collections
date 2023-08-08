@@ -1,6 +1,6 @@
-use std::collections::BTreeMap;
-
+use pyo3::types::{self, PyDict};
 use pyo3::{exceptions::PyStopIteration, prelude::*};
+use std::collections::{btree_map, BTreeMap};
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
@@ -77,22 +77,28 @@ impl Ord for PyObjectWrapper {
 }
 
 #[pyclass]
-struct PyIterator {
-    iter: Box<dyn Iterator<Item = PyObjectWrapper>>,
+struct PyKeysIterator {
+    iter: btree_map::Keys<'static, PyObjectWrapper, PyObjectWrapper>,
 }
 
-unsafe impl Send for PyIterator {}
-impl PyIterator {
-    fn new(iter: Box<dyn Iterator<Item = PyObjectWrapper>>) -> Self {
-        PyIterator { iter }
+// unsafe impl Send for PyKeysIterator {}
+impl PyKeysIterator {
+    fn new(iter: PyObject) -> Self {
+        let r = Python::with_gil(|py| {
+            let iter = iter.clone();
+            let r: &PyCell<PyBTreeMap> = iter.downcast(py).unwrap();
+            let a = r.borrow().tree.keys();
+            PyKeysIterator { iter: a }
+        });
+        return r;
     }
 }
 
 #[pymethods]
-impl PyIterator {
+impl PyKeysIterator {
     fn next(&mut self) -> PyResult<PyObject> {
         match self.iter.next() {
-            Some(x) => Ok(x.obj),
+            Some(x) => Ok(x.obj.clone()),
             None => Err(PyErr::new::<PyStopIteration, _>(())),
         }
     }
@@ -101,6 +107,12 @@ impl PyIterator {
 #[pyclass]
 struct PyBTreeMap {
     tree: BTreeMap<PyObjectWrapper, PyObjectWrapper>,
+}
+
+impl AsRef<PyBTreeMap> for PyBTreeMap {
+    fn as_ref(&self) -> &PyBTreeMap {
+        return &self;
+    }
 }
 
 #[pymethods]
@@ -141,9 +153,12 @@ impl PyBTreeMap {
         self.tree.clear();
     }
 
-    fn keys(&self) -> Vec<PyObject> {
-        let keys = self.tree.keys().map(|x| x.obj.clone());
-        return keys.collect();
+    fn keys(&self) -> PyKeysIterator {
+        let r = Python::with_gil(|py| {
+            let obj = self.into_py(py);
+            return obj.clone_ref(py);
+        });
+        return PyKeysIterator::new(r);
     }
 
     // fn items(&self) -> PyIterator {
