@@ -1,5 +1,5 @@
 mod pybtree_map;
-// mod pyiterator;
+mod pyiterator;
 mod pyobject_wrapper;
 
 use pybtree_map::PyBTreeMap;

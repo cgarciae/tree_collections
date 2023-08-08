@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 #[pyclass]
 pub struct PyBTreeMap {
-    tree: BTreeMap<PyObjectWrapper, PyObjectWrapper>,
+    pub tree: BTreeMap<PyObjectWrapper, PyObjectWrapper>,
 }
 
 #[pymethods]
