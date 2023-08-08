@@ -1,3 +1,4 @@
+use crate::pyiterator::PyBTreeKeyIterator;
 use crate::pyobject_wrapper::PyObjectWrapper;
 use pyo3::prelude::*;
 use std::collections::BTreeMap;
@@ -45,8 +46,11 @@ impl PyBTreeMap {
         self.tree.clear();
     }
 
-    pub fn keys(&self) -> Vec<PyObject> {
-        return self.tree.keys().map(|x| x.obj.clone()).collect();
+    pub fn keys(slf: PyRef<'_, Self>) -> PyBTreeKeyIterator {
+        Python::with_gil(|py| {
+            let obj = &slf.into_py(py);
+            return PyBTreeKeyIterator::create(py, obj);
+        })
     }
 
     pub fn values(&self) -> Vec<PyObject> {
@@ -61,12 +65,12 @@ impl PyBTreeMap {
             .collect();
     }
 
-    pub fn __iter__(&self) -> PyResult<PyObject> {
-        return Python::with_gil(|py| {
-            let builtins = py.import("builtins")?;
-            let py_iter = builtins.getattr("iter")?;
-            let iter = py_iter.call1((self.keys(),))?;
-            return Ok(iter.into_py(py));
-        });
-    }
+    // pub fn __iter__(&self) -> PyResult<PyObject> {
+    //     return Python::with_gil(|py| {
+    //         let builtins = py.import("builtins")?;
+    //         let py_iter = builtins.getattr("iter")?;
+    //         let iter = py_iter.call1((self.keys(),))?;
+    //         return Ok(iter.into_py(py));
+    //     });
+    // }
 }

@@ -8,7 +8,7 @@ use pyo3::prelude::*;
 
 #[pyclass]
 #[self_referencing]
-struct PyBTreeKeyIterator {
+pub struct PyBTreeKeyIterator {
     owner: PyObject,
     #[borrows(owner)]
     data: &'this PyRef<'static, PyBTreeMap>,
@@ -19,9 +19,9 @@ struct PyBTreeKeyIterator {
 unsafe impl Send for PyBTreeKeyIterator {}
 
 impl PyBTreeKeyIterator {
-    fn create(py: Python, owner: PyObject) -> Self {
+    pub fn create(py: Python, owner: &PyObject) -> Self {
         let x = PyBTreeKeyIterator::new(
-            owner,
+            owner.clone(),
             |owner| {
                 let owner: &PyCell<PyBTreeMap> = owner.downcast(py).unwrap();
                 let x = owner.borrow();

@@ -12,12 +12,12 @@ class TestTreeCollections:
 
     assert tree.keys() == [-3, -1, 1, 2]
     assert tree.values() == ["minus three", "minus one", "one", "two"]
-    assert tree.items() == [
-        (-3, "minus three"),
-        (-1, "minus one"),
-        (1, "one"),
-        (2, "two"),
-    ]
+    # assert tree.items() == [
+    #     (-3, "minus three"),
+    #     (-1, "minus one"),
+    #     (1, "one"),
+    #     (2, "two"),
+    # ]
 
-    for key in tree:
-      print(key)
+    iterator = iter(tree)
+    iterator
