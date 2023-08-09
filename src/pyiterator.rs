@@ -1,6 +1,6 @@
 use std::collections::btree_map;
 
-use crate::pyobject_wrapper::Elem;
+use crate::elem::Elem;
 use pyo3::prelude::*;
 
 // -------------------

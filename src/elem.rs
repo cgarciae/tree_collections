@@ -162,8 +162,9 @@ impl Ord for Elem {
 }
 
 fn pyobject_eq(py: Python, a: &PyObject, b: &PyObject) -> PyResult<bool> {
-    let operator = py.import("operator")?;
-    return operator.call_method1("eq", (a, b))?.extract::<bool>();
+    let a = a.downcast::<PyAny>(py)?;
+    let b = b.downcast::<PyAny>(py)?;
+    a.eq(b)
 }
 
 fn pyobject_partial_cmp(
@@ -171,38 +172,29 @@ fn pyobject_partial_cmp(
     a: &PyObject,
     b: &PyObject,
 ) -> PyResult<Option<std::cmp::Ordering>> {
-    let operator = py.import("operator")?;
+    let a = a.downcast::<PyAny>(py)?;
+    let b = b.downcast::<PyAny>(py)?;
 
-    let lt = operator.call_method1("lt", (a, b))?.extract::<bool>()?;
-    if lt {
-        return Ok(Some(std::cmp::Ordering::Less));
+    if a.lt(b)? {
+        Ok(Some(std::cmp::Ordering::Less))
+    } else if a.gt(b)? {
+        Ok(Some(std::cmp::Ordering::Greater))
+    } else if a.eq(b)? {
+        Ok(Some(std::cmp::Ordering::Equal))
+    } else {
+        Ok(None)
     }
-
-    let gt = operator.call_method1("gt", (a, b))?.extract::<bool>()?;
-    if gt {
-        return Ok(Some(std::cmp::Ordering::Greater));
-    }
-
-    let eq = operator.call_method1("eq", (a, b))?.extract::<bool>()?;
-    if eq {
-        return Ok(Some(std::cmp::Ordering::Equal));
-    }
-
-    return Ok(None);
 }
 
 fn pyobject_cmp(py: Python, a: &PyObject, b: &PyObject) -> PyResult<std::cmp::Ordering> {
-    let operator = py.import("operator")?;
+    let a = a.downcast::<PyAny>(py)?;
+    let b = b.downcast::<PyAny>(py)?;
 
-    let lt = operator.call_method1("lt", (a, b))?.extract::<bool>()?;
-    if lt {
-        return Ok(std::cmp::Ordering::Less);
+    if a.lt(b)? {
+        Ok(std::cmp::Ordering::Less)
+    } else if a.gt(b)? {
+        Ok(std::cmp::Ordering::Greater)
+    } else {
+        Ok(std::cmp::Ordering::Equal)
     }
-
-    let gt = operator.call_method1("gt", (a, b))?.extract::<bool>()?;
-    if gt {
-        return Ok(std::cmp::Ordering::Greater);
-    }
-
-    Ok(std::cmp::Ordering::Equal)
 }

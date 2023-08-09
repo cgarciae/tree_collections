@@ -1,5 +1,5 @@
+use crate::elem::Elem;
 use crate::pyiterator::{PyBTreeIterator, PyBTreeKeyIterator, PyBTreeValueIterator};
-use crate::pyobject_wrapper::Elem;
 use pyo3::prelude::*;
 use std::collections::{btree_map, BTreeMap};
 
@@ -56,56 +56,50 @@ impl PyBTreeMap {
 
     pub fn keys(slf: PyRef<'_, Self>) -> PyBTreeKeyIterator {
         let slf = &slf;
-        return Python::with_gil(|py| {
-            let owner = slf.into_py(py);
-            let iter = slf.tree.keys();
+        let owner = slf.into_py(slf.py());
+        let iter = slf.tree.keys();
 
-            return PyBTreeKeyIterator {
-                owner: owner.clone(),
-                iter: unsafe {
-                    std::mem::transmute::<
-                        btree_map::Keys<'_, Elem, Elem>,
-                        btree_map::Keys<'static, Elem, Elem>,
-                    >(iter)
-                },
-            };
-        });
+        return PyBTreeKeyIterator {
+            owner: owner.clone(),
+            iter: unsafe {
+                std::mem::transmute::<
+                    btree_map::Keys<'_, Elem, Elem>,
+                    btree_map::Keys<'static, Elem, Elem>,
+                >(iter)
+            },
+        };
     }
 
     pub fn values(slf: PyRef<'_, Self>) -> PyBTreeValueIterator {
         let slf = &slf;
-        return Python::with_gil(|py| {
-            let owner = slf.into_py(py);
-            let iter = slf.tree.values();
+        let owner = slf.into_py(slf.py());
+        let iter = slf.tree.values();
 
-            return PyBTreeValueIterator {
-                owner: owner.clone(),
-                iter: unsafe {
-                    std::mem::transmute::<
-                        btree_map::Values<'_, Elem, Elem>,
-                        btree_map::Values<'static, Elem, Elem>,
-                    >(iter)
-                },
-            };
-        });
+        return PyBTreeValueIterator {
+            owner: owner.clone(),
+            iter: unsafe {
+                std::mem::transmute::<
+                    btree_map::Values<'_, Elem, Elem>,
+                    btree_map::Values<'static, Elem, Elem>,
+                >(iter)
+            },
+        };
     }
 
     pub fn items(slf: PyRef<'_, Self>) -> PyBTreeIterator {
         let slf = &slf;
-        return Python::with_gil(|py| {
-            let owner = slf.into_py(py);
-            let iter = slf.tree.iter();
+        let owner = slf.into_py(slf.py());
+        let iter = slf.tree.iter();
 
-            return PyBTreeIterator {
-                owner: owner.clone(),
-                iter: unsafe {
-                    std::mem::transmute::<
-                        btree_map::Iter<'_, Elem, Elem>,
-                        btree_map::Iter<'static, Elem, Elem>,
-                    >(iter)
-                },
-            };
-        });
+        return PyBTreeIterator {
+            owner: owner.clone(),
+            iter: unsafe {
+                std::mem::transmute::<
+                    btree_map::Iter<'_, Elem, Elem>,
+                    btree_map::Iter<'static, Elem, Elem>,
+                >(iter)
+            },
+        };
     }
 
     fn __iter__(slf: PyRef<Self>) -> PyBTreeKeyIterator {

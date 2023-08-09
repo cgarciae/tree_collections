@@ -112,7 +112,7 @@ rects2 = ax.bar(
     label="SortedDict",
 )
 ax.set_ylabel("Time (seconds)")
-ax.set_title("Insertion time by key/value type")
+ax.set_title(f"Insertion time {N = } elements")
 ax.set_xticks(x)
 ax.set_xticklabels(labels)
 ax.legend()
