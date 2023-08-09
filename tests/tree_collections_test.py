@@ -1,4 +1,18 @@
+import itertools
+import random
 import tree_collections as tc
+
+
+def random_float():
+  return random.random()
+
+
+def random_string():
+  return str(random.random())
+
+
+def random_int():
+  return random.randint(0, 100_000_000)
 
 
 class TestTreeCollections:
@@ -44,3 +58,26 @@ class TestTreeCollections:
         (2, "two"),
         (5.2, "five point two"),
     ]
+
+  def test_combinations(self):
+    combinations = itertools.product(
+        [random_float, random_string, random_int],
+        [random_float, random_string, random_int],
+    )
+
+    N = 10
+
+    for key_fn, value_fn in combinations:
+      tree = tc.PyBTreeMap()
+      for _ in range(N):
+        tree.insert(key_fn(), value_fn())
+
+      print("\n\n========================================")
+      print(key_fn.__name__, value_fn.__name__)
+      print("========================================")
+      print(list(tree.items()))
+
+      assert len(tree) == N
+      assert len(list(tree.keys())) == N
+      assert len(list(tree.values())) == N
+      assert len(list(tree.items())) == N

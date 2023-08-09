@@ -42,7 +42,7 @@ impl PyBTreeMap {
         })
     }
 
-    pub fn len(&self) -> usize {
+    pub fn __len__(&self) -> usize {
         return self.tree.len();
     }
 

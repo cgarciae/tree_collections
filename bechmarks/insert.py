@@ -21,9 +21,15 @@ def random_int():
   return random.randint(0, 100_000_000)
 
 
-combinations = itertools.product(
-    [random_float, random_string, random_int],
-    [random_float, random_string, random_int],
+combinations = list(
+    itertools.product(
+        [
+            random_float,
+        ],  # random_string, random_int],
+        [
+            random_float,
+        ],  # random_string, random_int],
+    )
 )
 
 
@@ -53,6 +59,9 @@ for test_fn in [test_sortedcollections, test_tree_collections]:
   for key_fn, value_fn in combinations:
     t = test_sortedcollections(key_fn, value_fn)
     ts.append(t)
+    print(
+        f"[{test_fn.__name__}]({key_fn.__name__}, {value_fn.__name__}): {t:.3f} seconds"
+    )
 
   t = sum(ts)
   print(f"{test_fn.__name__}: {t:.3f} seconds")
