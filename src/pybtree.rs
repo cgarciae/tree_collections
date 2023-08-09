@@ -51,90 +51,43 @@ impl PyBTreeMap {
         Ok(PyBTreeMap { tree: btree })
     }
 
-    pub fn __setitem__(
+    pub fn insert(
         mut slf: PyRefMut<'_, Self>,
         key: PyObject,
         value: PyObject,
-    ) -> PyResult<()> {
+    ) -> PyResult<Option<PyObject>> {
         // cast to orderable type
         let py = slf.py();
         let elem_key = key.extract::<Elem>(py)?;
         let elem_value = value.extract::<Elem>(py)?;
-        slf.tree.insert(elem_key, elem_value);
+        let output = slf.tree.insert(elem_key, elem_value);
 
-        Ok(())
+        Ok(output.map(|x| x.into_py(py)))
     }
 
-    pub fn __getitem__(slf: PyRef<'_, Self>, key: PyObject) -> PyResult<PyObject> {
+    pub fn get(slf: PyRef<'_, Self>, key: PyObject) -> PyResult<Option<PyObject>> {
         let py = slf.py();
         let key = key.extract::<Elem>(py)?;
+        let output = slf.tree.get(&key);
 
-        slf.tree
-            .get(&key)
-            .map(|x| x.to_pyobject(py))
-            .ok_or_else(|| {
-                PyErr::new::<exceptions::PyKeyError, _>(format!("Key not found: {key:?}"))
-            })
+        Ok(output.map(|x| x.to_pyobject(py)))
     }
 
-    pub fn pop(
-        mut slf: PyRefMut<'_, Self>,
-        key: PyObject,
-        default: Option<PyObject>,
-    ) -> PyResult<PyObject> {
+    pub fn remove(mut slf: PyRefMut<'_, Self>, key: PyObject) -> PyResult<Option<PyObject>> {
         let py = slf.py();
         let key = key.extract::<Elem>(py)?;
         let output = slf.tree.remove(&key).map(|x| x.into_py(py));
 
-        match output {
-            None => match default {
-                Some(default) => Ok(default),
-                None => Err(PyErr::new::<exceptions::PyKeyError, _>(format!(
-                    "Key not found: {key:?}"
-                ))),
-            },
-            Some(output) => Ok(output),
-        }
+        Ok(output)
     }
 
-    pub fn popitem(mut slf: PyRefMut<'_, Self>, key: PyObject) -> PyResult<(PyObject, PyObject)> {
-        let py = slf.py();
-        let elem_key = key.extract::<Elem>(py)?;
-        let output = slf.tree.remove(&elem_key).map(|x| x.into_py(py));
-
-        match output {
-            None => {
-                let key_repr = key.to_string();
-                Err(PyErr::new::<exceptions::PyKeyError, _>(format!(
-                    "Key not found: {key_repr:?}"
-                )))
-            }
-            Some(value) => Ok((key, value)),
-        }
-    }
-
-    pub fn __delitem__(mut slf: PyRefMut<'_, Self>, key: PyObject) -> PyResult<()> {
-        let py = slf.py();
-        let elem_key = key.extract::<Elem>(py)?;
-        let result = slf.tree.remove(&elem_key).map(|x| x.into_py(py));
-
-        match result {
-            None => {
-                let key_repr = key.to_string();
-                Err(PyErr::new::<exceptions::PyKeyError, _>(format!(
-                    "Key not found: {key_repr:?}"
-                )))
-            }
-            Some(_) => Ok(()),
-        }
-    }
-    pub fn __contains__(slf: PyRef<'_, Self>, key: PyObject) -> PyResult<bool> {
+    pub fn contains_key(slf: PyRef<'_, Self>, key: PyObject) -> PyResult<bool> {
         let py = slf.py();
         let elem_key = key.extract::<Elem>(py)?;
         Ok(slf.tree.contains_key(&elem_key))
     }
 
-    pub fn nth(mut slf: PyRefMut<'_, Self>, n: i64) -> PyResult<(PyObject, PyObject)> {
+    pub fn nth(mut slf: PyRefMut<'_, Self>, n: i64) -> PyResult<Option<(PyObject, PyObject)>> {
         let py = slf.py();
 
         let n = match n {
@@ -157,7 +110,7 @@ impl PyBTreeMap {
             key_value_fn((entry.key(), entry.get()))
         };
 
-        let result = if n == 0 {
+        let output = if n == 0 {
             slf.tree.first_entry().map(entry_fn)
         } else if n == slf.tree.len() - 1 {
             slf.tree.last_entry().map(entry_fn)
@@ -165,15 +118,10 @@ impl PyBTreeMap {
             slf.tree.iter().nth(n).map(key_value_fn)
         };
 
-        match result {
-            None => Err(PyErr::new::<exceptions::PyIndexError, _>(
-                "Index out of range",
-            )),
-            Some(result) => Ok(result),
-        }
+        Ok(output)
     }
 
-    pub fn __len__(&self) -> usize {
+    pub fn len(&self) -> usize {
         return self.tree.len();
     }
 
@@ -232,9 +180,5 @@ impl PyBTreeMap {
                 >(iter)
             },
         };
-    }
-
-    fn __iter__(slf: PyRef<Self>) -> PyBTreeKeyIterator {
-        PyBTreeMap::keys(slf)
     }
 }
