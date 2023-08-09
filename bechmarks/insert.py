@@ -11,6 +11,8 @@ import tree_collections
 import itertools
 import secrets
 
+N = 10_000
+
 
 def random_float():
   return random.random()
@@ -19,7 +21,8 @@ def random_float():
 def random_string():
   num_bytes = 10  # Number of random bytes you want to generate
   random_bytes = secrets.token_bytes(num_bytes)
-  return base64.b64encode(random_bytes).decode('utf-8')
+  return base64.b64encode(random_bytes).decode("utf-8")
+
 
 # print(random_string())
 # exit()
@@ -45,9 +48,6 @@ combinations = list(
 )
 
 
-N = 10_000_000
-
-
 def test_sortedcollections(key_fn, value_fn):
   t0 = time.time()
   sorted_dict = sortedcollections.SortedDict()
@@ -59,9 +59,9 @@ def test_sortedcollections(key_fn, value_fn):
 
 def test_tree_collections(key_fn, value_fn):
   t0 = time.time()
-  tree = tree_collections.PyBTreeMap()
+  tree = tree_collections.TreeDict()
   for _ in range(N):
-    tree.insert(key_fn(), value_fn())
+    tree[key_fn()] = value_fn()
 
   return time.time() - t0
 
@@ -103,7 +103,7 @@ rects1 = ax.bar(
     x - width / 2,
     times_tree_collections,
     width,
-    label="PyBTreeMap",
+    label="BTreeMap",
 )
 rects2 = ax.bar(
     x + width / 2,

@@ -9,7 +9,8 @@ use pyo3::prelude::*;
 #[pyclass]
 pub struct PyBTreeKeyIterator {
     #[pyo3(get)]
-    pub owner: PyObject,
+    pub py_obj: PyObject,
+    // pub py_ref: Arc<RwLock<PyRef<'static, PyBTreeMap>>>,
     pub iter: btree_map::Keys<'static, Elem, Elem>,
 }
 
@@ -19,10 +20,8 @@ impl PyBTreeKeyIterator {
         slf
     }
 
-    fn __next__(&mut self) -> Option<PyObject> {
-        self.iter
-            .next()
-            .map(|x| Python::with_gil(|py| x.to_pyobject(py)))
+    fn __next__(mut slf: PyRefMut<Self>) -> Option<PyObject> {
+        slf.iter.next().map(|x| x.to_pyobject(slf.py()))
     }
 }
 
@@ -42,10 +41,8 @@ impl PyBTreeValueIterator {
         slf
     }
 
-    fn __next__(&mut self) -> Option<PyObject> {
-        self.iter
-            .next()
-            .map(|x| Python::with_gil(|py| x.to_pyobject(py)))
+    fn __next__(mut slf: PyRefMut<Self>) -> Option<PyObject> {
+        slf.iter.next().map(|x| x.to_pyobject(slf.py()))
     }
 }
 
@@ -65,9 +62,10 @@ impl PyBTreeIterator {
         slf
     }
 
-    fn __next__(&mut self) -> Option<(PyObject, PyObject)> {
-        self.iter
+    fn __next__(mut slf: PyRefMut<Self>) -> Option<(PyObject, PyObject)> {
+        let py = slf.py();
+        slf.iter
             .next()
-            .map(|(k, v)| Python::with_gil(|py| (k.to_pyobject(py), v.to_pyobject(py))))
+            .map(|(k, v)| (k.to_pyobject(py), v.to_pyobject(py)))
     }
 }
