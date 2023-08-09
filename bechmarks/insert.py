@@ -11,7 +11,7 @@ import tree_collections
 import itertools
 import secrets
 
-N = 10_000
+N = 1_000_000
 
 
 def random_float():

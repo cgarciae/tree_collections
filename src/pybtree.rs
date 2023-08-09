@@ -6,14 +6,14 @@ use pyo3::types::{PyIterator, PyMapping, PySequence, PyTuple};
 use std::collections::{btree_map, BTreeMap};
 
 #[pyclass]
-pub struct PyTreeDict {
+pub struct PyBTreeMap {
     pub tree: BTreeMap<Elem, Elem>,
 }
 
-unsafe impl Send for PyTreeDict {}
+unsafe impl Send for PyBTreeMap {}
 
 #[pymethods]
-impl PyTreeDict {
+impl PyBTreeMap {
     #[new]
     #[pyo3(signature = (input=None))]
     pub fn new(input: Option<PyObject>, py: Python) -> PyResult<Self> {
@@ -48,7 +48,7 @@ impl PyTreeDict {
             }
         }
 
-        Ok(PyTreeDict { tree: btree })
+        Ok(PyBTreeMap { tree: btree })
     }
 
     pub fn __setitem__(
@@ -235,6 +235,6 @@ impl PyTreeDict {
     }
 
     fn __iter__(slf: PyRef<Self>) -> PyBTreeKeyIterator {
-        PyTreeDict::keys(slf)
+        PyBTreeMap::keys(slf)
     }
 }

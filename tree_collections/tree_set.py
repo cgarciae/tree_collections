@@ -1,4 +1,4 @@
-from tree_collections.tree_collections import PyTreeDict
+from tree_collections.tree_collections import PyBTreeMap
 import typing as tp
 
 K = tp.TypeVar("K")
@@ -8,13 +8,13 @@ _T_co = tp.TypeVar("_T_co", covariant=True)
 
 class TreeSet(tp.MutableSet[K]):
   if tp.TYPE_CHECKING:
-    _tree: PyTreeDict[K, None]
+    _tree: PyBTreeMap[K, None]
 
   def __init__(self, __input: tp.Optional[tp.Iterable[K]] = None, /):
     if __input is not None:
-      self._tree = PyTreeDict((key, None) for key in __input)
+      self._tree = PyBTreeMap((key, None) for key in __input)
     else:
-      self._tree = PyTreeDict()
+      self._tree = PyBTreeMap()
 
   def __iter__(self) -> tp.Iterator[K]:
     return iter(self._tree.keys())
