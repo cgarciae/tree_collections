@@ -15,6 +15,13 @@ class SupportsKeysAndGetItem(tp.Protocol, tp.Generic[K, V]):
     raise NotImplemented
 
 
+class Missing:
+  pass
+
+
+MISSING = Missing()
+
+
 class TreeDict(tp.MutableMapping[K, V]):
   if tp.TYPE_CHECKING:
     _tree: PyBTreeMap[K, V]
@@ -103,8 +110,13 @@ class TreeDict(tp.MutableMapping[K, V]):
   def get(self, __key: K, default: tp.Union[V, T]) -> tp.Union[V, T]:
     ...
 
-  def get(self, __key: K, default: tp.Union[V, T] = None) -> tp.Union[V, T]:
-    return self._tree.get(__key, default)
+  def get(self, __key: K, default: tp.Union[T, Missing] = MISSING) -> tp.Union[V, T]:
+    result = self._tree.get(__key)
+    if result is None:
+      if isinstance(default, Missing):
+        raise KeyError
+      return default
+    return result
 
   def items(self) -> tp.ItemsView[K, V]:
     return self._tree.items()
@@ -114,6 +126,12 @@ class TreeDict(tp.MutableMapping[K, V]):
 
   def values(self) -> tp.ValuesView[V]:
     return self._tree.values()
+
+  def nth(self, n: int) -> tuple[K, V]:
+    output = self._tree.nth(n)
+    if output is None:
+      raise IndexError
+    return output
 
   def __eq__(self, __other: object) -> bool:
     return self._tree == __other
