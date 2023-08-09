@@ -1,11 +1,11 @@
 use crate::pyiterator::{PyBTreeIterator, PyBTreeKeyIterator, PyBTreeValueIterator};
-use crate::pyobject_wrapper::PyObjectWrapper;
+use crate::pyobject_wrapper::Elem;
 use pyo3::prelude::*;
 use std::collections::{btree_map, BTreeMap};
 
 #[pyclass]
 pub struct PyBTreeMap {
-    pub tree: BTreeMap<PyObjectWrapper, PyObjectWrapper>,
+    pub tree: BTreeMap<Elem, Elem>,
 }
 
 #[pymethods]
@@ -18,20 +18,28 @@ impl PyBTreeMap {
     }
 
     pub fn insert(&mut self, key: PyObject, value: PyObject) {
-        let key = PyObjectWrapper::new(key);
-        let value = PyObjectWrapper::new(value);
         // cast to orderable type
+        let (key, value) = Python::with_gil(|py| {
+            let key = key.extract::<Elem>(py).unwrap();
+            let value = value.extract::<Elem>(py).unwrap();
+            (key, value)
+        });
+
         self.tree.insert(key, value);
     }
 
-    pub fn get(&self, key: PyObject) -> Option<&PyObject> {
-        let key = PyObjectWrapper::new(key);
-        return self.tree.get(&key).map(|x| &x.obj);
+    pub fn get(&self, key: PyObject) -> Option<PyObject> {
+        Python::with_gil(|py| {
+            let key = key.extract::<Elem>(py).unwrap();
+            self.tree.get(&key).map(|x| x.to_pyobject(py))
+        })
     }
 
     pub fn remove(&mut self, key: PyObject) -> Option<PyObject> {
-        let key = PyObjectWrapper::new(key);
-        return self.tree.remove(&key).map(|x| x.obj);
+        Python::with_gil(|py| {
+            let key = key.extract::<Elem>(py).unwrap();
+            self.tree.remove(&key).map(|x| x.into_py(py))
+        })
     }
 
     pub fn len(&self) -> usize {
@@ -56,8 +64,8 @@ impl PyBTreeMap {
                 owner: owner.clone(),
                 iter: unsafe {
                     std::mem::transmute::<
-                        btree_map::Keys<'_, PyObjectWrapper, PyObjectWrapper>,
-                        btree_map::Keys<'static, PyObjectWrapper, PyObjectWrapper>,
+                        btree_map::Keys<'_, Elem, Elem>,
+                        btree_map::Keys<'static, Elem, Elem>,
                     >(iter)
                 },
             };
@@ -74,8 +82,8 @@ impl PyBTreeMap {
                 owner: owner.clone(),
                 iter: unsafe {
                     std::mem::transmute::<
-                        btree_map::Values<'_, PyObjectWrapper, PyObjectWrapper>,
-                        btree_map::Values<'static, PyObjectWrapper, PyObjectWrapper>,
+                        btree_map::Values<'_, Elem, Elem>,
+                        btree_map::Values<'static, Elem, Elem>,
                     >(iter)
                 },
             };
@@ -92,8 +100,8 @@ impl PyBTreeMap {
                 owner: owner.clone(),
                 iter: unsafe {
                     std::mem::transmute::<
-                        btree_map::Iter<'_, PyObjectWrapper, PyObjectWrapper>,
-                        btree_map::Iter<'static, PyObjectWrapper, PyObjectWrapper>,
+                        btree_map::Iter<'_, Elem, Elem>,
+                        btree_map::Iter<'static, Elem, Elem>,
                     >(iter)
                 },
             };

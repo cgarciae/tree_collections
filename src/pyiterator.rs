@@ -1,6 +1,6 @@
 use std::collections::btree_map;
 
-use crate::pyobject_wrapper::PyObjectWrapper;
+use crate::pyobject_wrapper::Elem;
 use pyo3::prelude::*;
 
 // -------------------
@@ -10,7 +10,7 @@ use pyo3::prelude::*;
 pub struct PyBTreeKeyIterator {
     #[pyo3(get)]
     pub owner: PyObject,
-    pub iter: btree_map::Keys<'static, PyObjectWrapper, PyObjectWrapper>,
+    pub iter: btree_map::Keys<'static, Elem, Elem>,
 }
 
 #[pymethods]
@@ -20,7 +20,9 @@ impl PyBTreeKeyIterator {
     }
 
     fn __next__(&mut self) -> Option<PyObject> {
-        self.iter.next().map(|x| x.obj.clone())
+        self.iter
+            .next()
+            .map(|x| Python::with_gil(|py| x.to_pyobject(py)))
     }
 }
 
@@ -31,7 +33,7 @@ impl PyBTreeKeyIterator {
 pub struct PyBTreeValueIterator {
     #[pyo3(get)]
     pub owner: PyObject,
-    pub iter: btree_map::Values<'static, PyObjectWrapper, PyObjectWrapper>,
+    pub iter: btree_map::Values<'static, Elem, Elem>,
 }
 
 #[pymethods]
@@ -41,7 +43,9 @@ impl PyBTreeValueIterator {
     }
 
     fn __next__(&mut self) -> Option<PyObject> {
-        self.iter.next().map(|x| x.obj.clone())
+        self.iter
+            .next()
+            .map(|x| Python::with_gil(|py| x.to_pyobject(py)))
     }
 }
 
@@ -52,7 +56,7 @@ impl PyBTreeValueIterator {
 pub struct PyBTreeIterator {
     #[pyo3(get)]
     pub owner: PyObject,
-    pub iter: btree_map::Iter<'static, PyObjectWrapper, PyObjectWrapper>,
+    pub iter: btree_map::Iter<'static, Elem, Elem>,
 }
 
 #[pymethods]
@@ -64,6 +68,6 @@ impl PyBTreeIterator {
     fn __next__(&mut self) -> Option<(PyObject, PyObject)> {
         self.iter
             .next()
-            .map(|(k, v)| (k.obj.clone(), v.obj.clone()))
+            .map(|(k, v)| Python::with_gil(|py| (k.to_pyobject(py), v.to_pyobject(py))))
     }
 }
