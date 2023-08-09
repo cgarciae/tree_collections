@@ -2,11 +2,14 @@
 Compare sortedcollections vs tree_collections
 """
 
+import base64
 import time
 import random
+import numpy as np
 import sortedcollections
 import tree_collections
 import itertools
+import secrets
 
 
 def random_float():
@@ -14,7 +17,12 @@ def random_float():
 
 
 def random_string():
-  return str(random.random())
+  num_bytes = 10  # Number of random bytes you want to generate
+  random_bytes = secrets.token_bytes(num_bytes)
+  return base64.b64encode(random_bytes).decode('utf-8')
+
+# print(random_string())
+# exit()
 
 
 def random_int():
@@ -25,15 +33,19 @@ combinations = list(
     itertools.product(
         [
             random_float,
-        ],  # random_string, random_int],
+            random_int,
+            random_string,
+        ],
         [
             random_float,
-        ],  # random_string, random_int],
+            random_int,
+            random_string,
+        ],
     )
 )
 
 
-N = 1_000_000
+N = 10_000_000
 
 
 def test_sortedcollections(key_fn, value_fn):
@@ -54,14 +66,55 @@ def test_tree_collections(key_fn, value_fn):
   return time.time() - t0
 
 
-for test_fn in [test_sortedcollections, test_tree_collections]:
-  ts = []
-  for key_fn, value_fn in combinations:
-    t = test_sortedcollections(key_fn, value_fn)
-    ts.append(t)
+ts = {
+    test_sortedcollections: [],
+    test_tree_collections: [],
+}
+
+for key_fn, value_fn in combinations:
+  for test_fn in [test_sortedcollections, test_tree_collections]:
+    t = test_fn(key_fn, value_fn)
+    ts[test_fn].append((key_fn, value_fn, t))
     print(
         f"[{test_fn.__name__}]({key_fn.__name__}, {value_fn.__name__}): {t:.3f} seconds"
     )
 
-  t = sum(ts)
+for test_fn in [test_sortedcollections, test_tree_collections]:
+  t = sum(t for _, _, t in ts[test_fn])
   print(f"{test_fn.__name__}: {t:.3f} seconds")
+
+# create a double bar chart comparing the two
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots()
+
+times_tree_collections = [t for _, _, t in ts[test_tree_collections]]
+times_sortedcollections = [t for _, _, t in ts[test_sortedcollections]]
+# remove 'random_' prefix
+labels = [
+    f"({key_fn.__name__[7:]}, {value_fn.__name__[7:]})"
+    for key_fn, value_fn, _ in ts[test_tree_collections]
+]
+
+x = np.arange(len(labels))  # the label locations
+width = 0.35  # the width of the bars
+
+rects1 = ax.bar(
+    x - width / 2,
+    times_tree_collections,
+    width,
+    label="PyBTreeMap",
+)
+rects2 = ax.bar(
+    x + width / 2,
+    times_sortedcollections,
+    width,
+    label="SortedDict",
+)
+ax.set_ylabel("Time (seconds)")
+ax.set_title("Insertion time by key/value type")
+ax.set_xticks(x)
+ax.set_xticklabels(labels)
+ax.legend()
+
+plt.show()
