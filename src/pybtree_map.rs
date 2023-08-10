@@ -1,5 +1,5 @@
 use crate::elem::Elem;
-use crate::iterator::{PyBTreeIterator, PyBTreeKeyIterator, PyBTreeValueIterator};
+use crate::iterators::{PyBTreeMapIter, PyBTreeMapKeys, PyBTreeMapValues};
 use pyo3::exceptions;
 use pyo3::prelude::*;
 use pyo3::types::{PyIterator, PyMapping, PySequence, PyTuple};
@@ -7,7 +7,7 @@ use std::collections::{btree_map, BTreeMap};
 
 #[pyclass]
 pub struct PyBTreeMap {
-    pub tree: BTreeMap<Elem, Elem>,
+    pub btree_map: BTreeMap<Elem, Elem>,
 }
 
 unsafe impl Send for PyBTreeMap {}
@@ -48,7 +48,7 @@ impl PyBTreeMap {
             }
         }
 
-        Ok(PyBTreeMap { tree: btree })
+        Ok(PyBTreeMap { btree_map: btree })
     }
 
     pub fn insert(
@@ -60,7 +60,7 @@ impl PyBTreeMap {
         let py = slf.py();
         let elem_key = key.extract::<Elem>(py)?;
         let elem_value = value.extract::<Elem>(py)?;
-        let output = slf.tree.insert(elem_key, elem_value);
+        let output = slf.btree_map.insert(elem_key, elem_value);
 
         Ok(output.map(|x| x.into_py(py)))
     }
@@ -68,7 +68,7 @@ impl PyBTreeMap {
     pub fn get(slf: PyRef<'_, Self>, key: PyObject) -> PyResult<Option<PyObject>> {
         let py = slf.py();
         let key = key.extract::<Elem>(py)?;
-        let output = slf.tree.get(&key);
+        let output = slf.btree_map.get(&key);
 
         Ok(output.map(|x| x.to_pyobject(py)))
     }
@@ -76,7 +76,7 @@ impl PyBTreeMap {
     pub fn remove(mut slf: PyRefMut<'_, Self>, key: PyObject) -> PyResult<Option<PyObject>> {
         let py = slf.py();
         let key = key.extract::<Elem>(py)?;
-        let output = slf.tree.remove(&key).map(|x| x.into_py(py));
+        let output = slf.btree_map.remove(&key).map(|x| x.into_py(py));
 
         Ok(output)
     }
@@ -84,24 +84,22 @@ impl PyBTreeMap {
     pub fn contains_key(slf: PyRef<'_, Self>, key: PyObject) -> PyResult<bool> {
         let py = slf.py();
         let elem_key = key.extract::<Elem>(py)?;
-        Ok(slf.tree.contains_key(&elem_key))
+        Ok(slf.btree_map.contains_key(&elem_key))
     }
 
-    pub fn nth(mut slf: PyRefMut<'_, Self>, n: i64) -> PyResult<Option<(PyObject, PyObject)>> {
+    pub fn nth(mut slf: PyRefMut<'_, Self>, mut n: i64) -> PyResult<Option<(PyObject, PyObject)>> {
         let py = slf.py();
 
-        let n = match n {
-            n if n < 0 => {
-                let n = slf.tree.len() as i64 + n;
-                if n < 0 {
-                    return Err(PyErr::new::<exceptions::PyIndexError, _>(
-                        "index out of range",
-                    ));
-                }
-                n
-            }
-            n => n,
-        } as usize;
+        if n >= slf.btree_map.len() as i64 {
+            return Ok(None);
+        }
+        if n < 0 {
+            n = slf.btree_map.len() as i64 + n;
+        }
+        if n < 0 {
+            return Ok(None);
+        }
+        let n = n as usize;
 
         let key_value_fn = |(key, value): (&Elem, &Elem)| -> (PyObject, PyObject) {
             (Elem::to_pyobject(key, py), Elem::to_pyobject(value, py))
@@ -111,34 +109,34 @@ impl PyBTreeMap {
         };
 
         let output = if n == 0 {
-            slf.tree.first_entry().map(entry_fn)
-        } else if n == slf.tree.len() - 1 {
-            slf.tree.last_entry().map(entry_fn)
+            slf.btree_map.first_entry().map(entry_fn)
+        } else if n == slf.btree_map.len() - 1 {
+            slf.btree_map.last_entry().map(entry_fn)
         } else {
-            slf.tree.iter().nth(n).map(key_value_fn)
+            slf.btree_map.iter().nth(n).map(key_value_fn)
         };
 
         Ok(output)
     }
 
     pub fn len(&self) -> usize {
-        return self.tree.len();
+        return self.btree_map.len();
     }
 
     pub fn is_empty(&self) -> bool {
-        return self.tree.is_empty();
+        return self.btree_map.is_empty();
     }
 
     pub fn clear(&mut self) {
-        self.tree.clear();
+        self.btree_map.clear();
     }
 
-    pub fn keys(slf: PyRef<'_, Self>) -> PyBTreeKeyIterator {
+    pub fn keys(slf: PyRef<'_, Self>) -> PyBTreeMapKeys {
         let slf = &slf;
         let owner = slf.into_py(slf.py());
-        let iter = slf.tree.keys();
+        let iter = slf.btree_map.keys();
 
-        return PyBTreeKeyIterator {
+        return PyBTreeMapKeys {
             py_obj: owner.clone(),
             // py_ref: slf.clone(),
             iter: unsafe {
@@ -150,12 +148,12 @@ impl PyBTreeMap {
         };
     }
 
-    pub fn values(slf: PyRef<'_, Self>) -> PyBTreeValueIterator {
+    pub fn values(slf: PyRef<'_, Self>) -> PyBTreeMapValues {
         let slf = &slf;
         let owner = slf.into_py(slf.py());
-        let iter = slf.tree.values();
+        let iter = slf.btree_map.values();
 
-        return PyBTreeValueIterator {
+        return PyBTreeMapValues {
             owner: owner.clone(),
             iter: unsafe {
                 std::mem::transmute::<
@@ -166,12 +164,12 @@ impl PyBTreeMap {
         };
     }
 
-    pub fn items(slf: PyRef<'_, Self>) -> PyBTreeIterator {
+    pub fn items(slf: PyRef<'_, Self>) -> PyBTreeMapIter {
         let slf = &slf;
         let owner = slf.into_py(slf.py());
-        let iter = slf.tree.iter();
+        let iter = slf.btree_map.iter();
 
-        return PyBTreeIterator {
+        return PyBTreeMapIter {
             owner: owner.clone(),
             iter: unsafe {
                 std::mem::transmute::<

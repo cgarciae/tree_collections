@@ -5,6 +5,8 @@ K = tp.TypeVar("K")
 B = tp.TypeVar("B")
 _T_co = tp.TypeVar("_T_co", covariant=True)
 
+tp.Sequence.index
+
 
 class TreeSet(tp.MutableSet[K]):
   if tp.TYPE_CHECKING:
