@@ -15,13 +15,13 @@ N = 1_000_000
 
 
 def random_float():
-  return random.random()
+    return random.random()
 
 
 def random_string():
-  num_bytes = 10  # Number of random bytes you want to generate
-  random_bytes = secrets.token_bytes(num_bytes)
-  return base64.b64encode(random_bytes).decode("utf-8")
+    num_bytes = 10  # Number of random bytes you want to generate
+    random_bytes = secrets.token_bytes(num_bytes)
+    return base64.b64encode(random_bytes).decode("utf-8")
 
 
 # print(random_string())
@@ -29,7 +29,7 @@ def random_string():
 
 
 def random_int():
-  return random.randint(0, 100_000_000)
+    return random.randint(0, 100_000_000)
 
 
 combinations = list(
@@ -49,21 +49,21 @@ combinations = list(
 
 
 def test_sortedcollections(key_fn, value_fn):
-  t0 = time.time()
-  sorted_dict = sortedcollections.SortedDict()
-  for _ in range(N):
-    sorted_dict[key_fn()] = value_fn()
+    t0 = time.time()
+    sorted_dict = sortedcollections.SortedDict()
+    for _ in range(N):
+        sorted_dict[key_fn()] = value_fn()
 
-  return time.time() - t0
+    return time.time() - t0
 
 
 def test_tree_collections(key_fn, value_fn):
-  t0 = time.time()
-  tree = tree_collections.TreeDict()
-  for _ in range(N):
-    tree[key_fn()] = value_fn()
+    t0 = time.time()
+    tree = tree_collections.TreeDict()
+    for _ in range(N):
+        tree[key_fn()] = value_fn()
 
-  return time.time() - t0
+    return time.time() - t0
 
 
 ts = {
@@ -72,16 +72,16 @@ ts = {
 }
 
 for key_fn, value_fn in combinations:
-  for test_fn in [test_sortedcollections, test_tree_collections]:
-    t = test_fn(key_fn, value_fn)
-    ts[test_fn].append((key_fn, value_fn, t))
-    print(
-        f"[{test_fn.__name__}]({key_fn.__name__}, {value_fn.__name__}): {t:.3f} seconds"
-    )
+    for test_fn in [test_sortedcollections, test_tree_collections]:
+        t = test_fn(key_fn, value_fn)
+        ts[test_fn].append((key_fn, value_fn, t))
+        print(
+            f"[{test_fn.__name__}]({key_fn.__name__}, {value_fn.__name__}): {t:.3f} seconds"
+        )
 
 for test_fn in [test_sortedcollections, test_tree_collections]:
-  t = sum(t for _, _, t in ts[test_fn])
-  print(f"{test_fn.__name__}: {t:.3f} seconds")
+    t = sum(t for _, _, t in ts[test_fn])
+    print(f"{test_fn.__name__}: {t:.3f} seconds")
 
 # create a double bar chart comparing the two
 import matplotlib.pyplot as plt

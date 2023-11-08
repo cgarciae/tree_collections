@@ -37,6 +37,12 @@ class TestTreeCollections:
         (2, "two"),
     ]
 
+  def test_basic2(self):
+    tree = tc.TreeDict({1: "one", -1: "minus one", 2: "two"})
+
+    assert list(tree.keys()) == [-1, 1, 2]
+    assert list(tree.values()) == ["minus one", "one", "two"]
+
   def test_mutiple_types(self):
     tree = tc.TreeDict({
         1: "one",

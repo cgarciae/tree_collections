@@ -27,7 +27,8 @@ class TreeDict(tp.MutableMapping[K, V]):
     _tree: PyBTreeMap[K, V]
 
   def __init__(
-      self, other: tp.Union[tp.Mapping[K, V], tp.Iterable[tp.Tuple[K, V]], None] = None
+      self,
+      other: tp.Union[tp.Mapping[K, V], tp.Iterable[tp.Tuple[K, V]], None] = None,
   ):
     if other is not None:
       self._tree = PyBTreeMap(other)
